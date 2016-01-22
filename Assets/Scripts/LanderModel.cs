@@ -6,15 +6,9 @@ using System;
 public struct LanderModel {
 
 	public float Thrust;
-	public float MaxThrust;
-	public float Acceleration;
+	public float SideThrust;
 
 	public float CrashVelocity;
-
-	public float SideThrust;
-	public float MaxSideThrust;
-	public float SideAcceleration;
-
 	public float CrashRotation; // TODO: Make this relative to landing platform
 
 	public enum State { 
@@ -22,6 +16,12 @@ public struct LanderModel {
 		Dead
 	}
 	public State CurrentState;
+
+	public bool IsAlive {
+		get {
+			return CurrentState == State.Alive;
+		}
+	}
 
 	public float MaxFuel;
 	public float Fuel;

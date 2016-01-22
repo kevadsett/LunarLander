@@ -10,55 +10,40 @@ public class LanderController : MonoBehaviour {
 	private float _previousRotation;
 
 	void FixedUpdate() {
-		Transform ThrusterFlare = transform.Find ("ThrusterFlare");
-		Transform ThrusterFlareLeft = transform.Find ("ThrusterFlareLeft");
-		Transform ThrusterFlareRight = transform.Find ("ThrusterFlareRight");
-		if (Model.CurrentState == LanderModel.State.Alive) {
-			if (Model.Fuel > 0) { 
-				if (Input.GetKey (KeyCode.UpArrow)) {
-					Model.Fuel -= Model.FuelDepletionRate;
-					ThrusterFlare.localScale = new Vector3 (1, 0.4f, 1);
-					if (Model.Thrust < Model.MaxThrust) {
-						Model.Thrust += Model.Acceleration * Time.deltaTime;
-					}
+		float thrust = 0.0f;
+		float rotationalThrust = 0.0f;
+		if (Model.IsAlive) {
+			GameObject thrusterFlare = transform.Find ("ThrusterFlare").gameObject;
+			GameObject thrusterFlareLeft = transform.Find ("ThrusterFlareLeft").gameObject;
+			GameObject thrusterFlareRight = transform.Find ("ThrusterFlareRight").gameObject;
+			if (Model.Fuel > 0) {
+				thrust = GetThrust ();
+				if (thrust > 0) {
+					thrusterFlare.SetActive (true);
 				} else {
-					ThrusterFlare.localScale = new Vector3 (1, 0.0f, 1);
-					Model.Thrust = 0;
+					thrusterFlare.SetActive (false);
+				}
+				rotationalThrust = GetSideThrust ();
+
+				if (rotationalThrust > 0) {
+					thrusterFlareLeft.SetActive (true);
+					thrusterFlareRight.SetActive (false);
+				} else if (rotationalThrust < 0) {
+					thrusterFlareLeft.SetActive (false);
+					thrusterFlareRight.SetActive (true);
+				} else {
+					thrusterFlareLeft.SetActive (false);
+					thrusterFlareRight.SetActive (false);
 				}
 
-				if (Input.GetKey (KeyCode.LeftArrow)) {
-					Model.Fuel -= Model.FuelDepletionRate / 2;
-					ThrusterFlareLeft.localScale = new Vector3 (0.2f, 0.2f, 0.2f);
-					ThrusterFlareRight.localScale = new Vector3 (0.2f, 0, 0.2f);
-					if (Model.SideThrust < Model.MaxSideThrust) {
-						Model.SideThrust += Model.SideAcceleration * Time.deltaTime;
-					}
-				} else if (Input.GetKey (KeyCode.RightArrow)) {
-					Model.Fuel -= Model.FuelDepletionRate / 2;
-					ThrusterFlareLeft.localScale = new Vector3 (0.2f, 0, 0.2f);
-					ThrusterFlareRight.localScale = new Vector3 (0.2f, 0.2f, 0.2f);
-					if (Model.SideThrust > -Model.MaxSideThrust) {
-						Model.SideThrust -= Model.SideAcceleration * Time.deltaTime;
-					}
-				} else {
-					ThrusterFlareLeft.localScale = new Vector3 (0.2f, 0, 0.2f);
-					ThrusterFlareRight.localScale = new Vector3 (0.2f, 0, 0.2f);
-					if (Model.SideThrust > 0) {
-						Model.SideThrust -= (Model.SideAcceleration * 2) * Time.deltaTime;
-					} else if (Model.SideThrust < 0) {
-						Model.SideThrust += (Model.SideAcceleration * 2) * Time.deltaTime;
-					}
-				}
 				Rigidbody rb = gameObject.GetComponent<Rigidbody> ();
-				rb.AddRelativeForce (Vector3.up * Model.Thrust);
-				rb.AddRelativeTorque (transform.forward * Model.SideThrust);
+				rb.AddRelativeForce (Vector3.up * thrust * Time.deltaTime);
+				rb.AddRelativeTorque (transform.forward * rotationalThrust * Time.deltaTime);
 				_previousVelocity = rb.velocity.magnitude;
 				_previousRotation = rb.rotation.z;
 			} else {
 				Model.Fuel = 0;
-				ThrusterFlare.localScale = new Vector3 (0, 0, 0);
-				ThrusterFlareLeft.localScale = new Vector3 (0, 0, 0);
-				ThrusterFlareRight.localScale = new Vector3 (0, 0, 0);
+				HideAllThrusters ();
 			}
 
 			UIController.Instance.UpdateFuelScale (Model.Fuel, Model.MaxFuel);
@@ -67,14 +52,35 @@ public class LanderController : MonoBehaviour {
 
 	void OnCollisionEnter (Collision col) {
 		if (col.transform.root.name == "Level") {
-			if (_previousVelocity > Model.CrashVelocity || Mathf.Abs(_previousRotation) > Model.CrashRotation ) {
+			if (_previousVelocity > Model.CrashVelocity || Mathf.Abs(_previousRotation) > Model.CrashRotation || Model.Fuel == 0) {
 				Model.CurrentState = LanderModel.State.Dead;
 				Explode ();
+				HideAllThrusters ();
 			} else if (col.transform.name == "LandingPlatform") {
 				Model.CurrentState = LanderModel.State.Dead;
 				GameController.Instance.SetWinState ();
+				HideAllThrusters ();
 			}
 		}
+	}
+
+	private float GetThrust() {
+		float thrust = 0.0f;
+		if (Input.GetKey (KeyCode.UpArrow)) {
+			Model.Fuel -= Model.FuelDepletionRate;
+			thrust = Model.Thrust;
+		}
+		return thrust;
+	}
+
+	private float GetSideThrust() {
+		float thrust = 0;
+		if (Input.GetKey (KeyCode.LeftArrow)) {
+			thrust = Model.SideThrust;
+		} else if (Input.GetKey (KeyCode.RightArrow)) {
+			thrust = -Model.SideThrust;
+		}
+		return thrust;
 	}
 
 	private void Explode() {
@@ -96,6 +102,21 @@ public class LanderController : MonoBehaviour {
 		transform.DetachChildren ();
 		Destroy (gameObject);
 		GameController.Instance.SetLoseState ();
+	}
+
+	private void HideAllThrusters() {
+		Transform thrusterFlare = transform.Find ("ThrusterFlare");
+		if (thrusterFlare) {
+			thrusterFlare.gameObject.SetActive (false);
+		}
+		Transform thrusterFlareLeft = transform.Find ("ThrusterFlareLeft");
+		if (thrusterFlareLeft) {
+			thrusterFlareLeft.gameObject.SetActive (false);
+		}
+		Transform thrusterFlareRight = transform.Find ("ThrusterFlareRight");
+		if (thrusterFlareRight) {
+			thrusterFlareRight.gameObject.SetActive (false);
+		}
 	}
 
 }

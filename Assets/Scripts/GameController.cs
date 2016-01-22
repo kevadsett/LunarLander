@@ -12,14 +12,14 @@ public class GameController : MonoBehaviour {
 	public static GameController Instance {
 		get {
 			if (!_instance) {
-				_instance = Camera.main.GetComponent<GameController> ();
+				_instance = GameObject.Find("MainCamera").GetComponent<GameController> ();
 			}
 			return _instance;
 		}
 	}
 
 	void Update() {
-		if (Model.CurrentState == GameModel.State.Lose && Input.anyKeyDown) {
+		if ((Model.CurrentState == GameModel.State.Lose || Model.CurrentState == GameModel.State.Win) && Input.anyKeyDown) {
 			Reset ();
 		}
 	}
@@ -29,19 +29,22 @@ public class GameController : MonoBehaviour {
 		Physics.gravity = Vector3.up * -1;
 		ClearDebris ();
 		Instantiate (Lander);
+		SetRunningState ();
 	}
 
 	public void SetWinState() {
 		SetState (GameModel.State.Win);
-		Debug.Log ("You win");
+		UIController.Instance.UpdateStatusText ("You win");
 	}
 
 	public void SetLoseState() {
 		SetState (GameModel.State.Lose);
+		UIController.Instance.UpdateStatusText ("You lose");
 	}
 
 	public void SetRunningState() {
 		SetState (GameModel.State.Running);
+		UIController.Instance.UpdateStatusText ("");
 	}
 
 	public void AddDebris(Transform t) {

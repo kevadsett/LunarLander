@@ -1,14 +1,17 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
 
 public class UIController : MonoBehaviour {
 
 	private static UIController _instance;
 
-	private Transform _fuel;
+	private Transform _fuelRect;
+	private Transform _statusText;
 
 	void Start() {
-		_fuel = transform.Find("Fuel");
+		_fuelRect = transform.Find("Fuel");
+		_statusText = transform.Find("Status");
 	}
 
 	public static UIController Instance {
@@ -21,7 +24,11 @@ public class UIController : MonoBehaviour {
 	}
 
 	public void UpdateFuelScale(float currentFuel, float maxFuel) {
-		RectTransform fuelRect = _fuel.GetComponent<RectTransform> ();
+		RectTransform fuelRect = _fuelRect.GetComponent<RectTransform> ();
 		fuelRect.localScale = new Vector3 (currentFuel / maxFuel, 1, 1);
+	}
+
+	public void UpdateStatusText(string newStatus) {
+		_statusText.GetComponent<Text> ().text = newStatus;
 	}
 }
